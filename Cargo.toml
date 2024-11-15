@@ -395,11 +395,12 @@ reth-trie-db = { path = "crates/trie/db" }
 reth-trie-parallel = { path = "crates/trie/parallel" }
 
 # revm
-revm = { version = "14.0.0", features = [
+revm = { git = "https://github.com/nhtyy/revm", branch = "n/skip_jumpdest_analysis", features = [
     "std",
+    "skip_jumpdest_analysis",
 ], default-features = false }
 revm-inspectors = "0.6"
-revm-primitives = { version = "9.0.0", features = [
+revm-primitives = { git = "https://github.com/nhtyy/revm", branch = "n/skip_jumpdest_analysis",  features = [
     "std",
 ], default-features = false }
 
