@@ -5,7 +5,9 @@ use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Buf;
 use derive_more::Deref;
 use reth_codecs::{add_arbitrary_tests, Compact};
-use revm_primitives::{AccountInfo, Bytecode as RevmBytecode, JumpTable};
+use revm_primitives::{
+    legacy::LegacyRawPaddedBytecode, AccountInfo, Bytecode as RevmBytecode, JumpTable,
+};
 use serde::{Deserialize, Serialize};
 
 /// An Ethereum account.
@@ -30,9 +32,9 @@ impl Account {
     /// After `SpuriousDragon` empty account is defined as account with nonce == 0 && balance == 0
     /// && bytecode = None (or hash is [`KECCAK_EMPTY`]).
     pub fn is_empty(&self) -> bool {
-        self.nonce == 0 &&
-            self.balance.is_zero() &&
-            self.bytecode_hash.map_or(true, |hash| hash == KECCAK_EMPTY)
+        self.nonce == 0
+            && self.balance.is_zero()
+            && self.bytecode_hash.map_or(true, |hash| hash == KECCAK_EMPTY)
     }
 
     /// Returns an account bytecode's hash.
@@ -71,6 +73,7 @@ impl Compact for Bytecode {
             RevmBytecode::LegacyAnalyzed(analyzed) => analyzed.bytecode(),
             RevmBytecode::Eof(eof) => eof.raw(),
             RevmBytecode::Eip7702(eip7702) => eip7702.raw(),
+            RevmBytecode::LegacyRawPadded(padded) => padded.bytecode(),
         };
         buf.put_u32(bytecode.len() as u32);
         buf.put_slice(bytecode.as_ref());
@@ -94,6 +97,11 @@ impl Compact for Bytecode {
             RevmBytecode::Eip7702(_) => {
                 buf.put_u8(4);
                 1
+            }
+            RevmBytecode::LegacyRawPadded(padded) => {
+                buf.put_u8(5);
+                buf.put_u64(padded.original_len() as u64);
+                1 + 8
             }
         };
         len + bytecode.len() + 4
@@ -121,6 +129,10 @@ impl Compact for Bytecode {
                 // EOF and EIP-7702 bytecode objects will be decoded from the raw bytecode
                 Self(RevmBytecode::new_raw(bytes))
             }
+            5 => Self(RevmBytecode::LegacyRawPadded(LegacyRawPaddedBytecode::new(
+                bytes,
+                buf.read_u64::<BigEndian>().unwrap() as usize,
+            ))),
             _ => unreachable!("Junk data in database: unknown Bytecode variant"),
         };
         (decoded, &[])

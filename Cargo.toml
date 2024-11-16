@@ -560,3 +560,7 @@ serial_test = "3"
 similar-asserts = "1.5.0"
 tempfile = "3.8"
 test-fuzz = "5"
+
+[patch.crates-io]
+revm = { git = "https://github.com/nhtyy/revm", branch = "n/skip_jumpdest_analysis3" }
+revm-primitives = { git = "https://github.com/nhtyy/revm", branch = "n/skip_jumpdest_analysis3" }
